@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer - Astronaut</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+        }
+        canvas {
+            display: block;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: sans-serif;
+            font-size: 18px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">載入 3D 模型中...</div>
+
+    <!-- 透過 Import Map 引入 Three.js 與 GLTFLoader -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // 1. 建立 3D 場景
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
+
+        // 2. 建立相機
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.5, 4);
+
+        // 3. 建立渲染器
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        // 4. 加入滑鼠控制（可以旋轉、縮放、平移 3D 模型）
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; // 讓操作更滑順
+
+        // 5. 加入燈光（避免模型看起來黑漆漆的一片）
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+
+        const backLight = new THREE.DirectionalLight(0x90caf9, 1.0);
+        backLight.position.set(-5, -5, -5);
+        scene.add(backLight);
+
+        // 6. 載入 .glb 模型
+        // ⚠️ 這裡使用相對路徑，代表模型檔案必須跟 index.html 放在同一個專案資料夾裡
+        const modelUrl = './Astronaut.glb';
+        
+        const loader = new GLTFLoader();
+        loader.load(
+            modelUrl,
+            function (gltf) {
+                const model = gltf.scene;
+                scene.add(model);
+                
+                // 移除讀取中的提示文字
+                document.getElementById('loading').style.display = 'none';
+                console.log('模型載入成功！');
+            },
+            function (xhr) {
+                // 計算下載進度
+                const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
+                if (!isNaN(percent)) {
+                    document.getElementById('loading').innerText = `載入中... ${percent}%`;
+                }
+            },
+            function (error) {
+                console.error('模型載入失敗：', error);
+                document.getElementById('loading').innerText = '載入失敗，請檢查主控台 (F12)';
+            }
+        );
+
+        // 7. 動畫迴圈
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // 更新滑鼠控制器
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 8. 視窗大小改變時自動適應
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
